@@ -7,162 +7,170 @@
 <title>NEON RACER WORLD</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#050914;color:white;font-family:Arial;overflow:hidden}
-canvas{display:block}
-button,select{font:inherit}
-#menu{
- position:fixed;inset:0;z-index:5;overflow:auto;
- background:linear-gradient(130deg,#06101fee,#081b31ee);
- padding:30px;
-}
-h1{color:#00eaff;letter-spacing:3px;font-size:clamp(25px,5vw,48px);margin:0}
+body{margin:0;background:#050914;color:white;font-family:Arial,sans-serif}
+button{cursor:pointer;border:0;border-radius:8px;padding:12px 17px;
+background:#00d9f5;color:#00131b;font-weight:bold}
+button:hover{filter:brightness(1.2)}
+button:disabled{opacity:.45;cursor:not-allowed}
+#garage{min-height:100vh;padding:25px;background:
+radial-gradient(ellipse at top,#12314a,#050914 70%)}
+.container{max-width:1250px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+h1{font-size:clamp(26px,5vw,48px);letter-spacing:3px;color:#00eaff;margin:0}
 h2{color:#00eaff}
-.sub{color:#9cb6ca}
-.panel{max-width:1050px;margin:auto}
-.top{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;align-items:center}
-.stats{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0}
-.stat{background:#10283b;border:1px solid #12617b;border-radius:10px;padding:12px 17px}
-#cars{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-.carcard{background:#102033;border:1px solid #29465e;border-radius:12px;padding:14px}
-.carcard.selected{border:2px solid #00eaff;box-shadow:0 0 18px #00dfff55}
-.carcard h3{margin:8px 0}
-.carcard p{color:#9bb2c4;font-size:13px}
-button{background:#00bddd;color:#00131c;border:0;padding:11px 17px;
-border-radius:8px;font-weight:bold;cursor:pointer}
-button:hover{background:#72efff}
-button:disabled{opacity:.4;cursor:not-allowed}
-.secondary{background:#233e55;color:white}
-#start{font-size:18px;padding:15px 30px;margin-top:20px}
-#gamehud{display:none;position:fixed;z-index:3;top:15px;left:15px;
-background:#071526e8;border:1px solid #00dfff;border-radius:12px;padding:15px}
-#gamehud strong{color:#00eaff}
-#controls{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
-background:#071526e8;padding:12px;border-radius:10px;font-size:12px;white-space:nowrap}
-#exit{display:none;position:fixed;right:15px;top:15px;z-index:4}
-#color{width:100%;margin-top:10px}
-#notice{color:#8feaff;font-size:13px;margin-top:12px}
+.muted{color:#9bb5c8}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}
+.stat{background:#10263b;border:1px solid #1c536b;padding:13px 17px;border-radius:10px}
+#cars{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.car{
+ background:#102033;border:1px solid #24465e;border-radius:13px;
+ overflow:hidden;transition:.2s;cursor:pointer
+}
+.car:hover{transform:translateY(-3px);border-color:#00eaff}
+.car.selected{border:2px solid #00eaff;box-shadow:0 0 22px #00dfff44}
+.car img{width:100%;height:145px;object-fit:cover;display:block;background:#172a3d}
+.carinfo{padding:14px}
+.carinfo h3{margin:0 0 7px}
+.carinfo p{color:#a8bfd0;font-size:13px;margin:6px 0}
+.carinfo button{width:100%;margin-top:8px}
+#preview{display:grid;grid-template-columns:1fr 1fr;gap:22px;
+background:#0c1d30;border:1px solid #1a536e;border-radius:14px;
+padding:18px;margin:25px 0}
+#preview img{width:100%;height:230px;object-fit:cover;border-radius:9px}
+#color{width:100%;height:45px;background:transparent;border:0}
+#play{font-size:19px;padding:16px 30px;margin:12px 0}
+#game{display:none;position:fixed;inset:0;background:#101b2d}
+#game canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;top:15px;left:15px;background:#071526e8;
+border:1px solid #00dfff;border-radius:12px;padding:15px;line-height:1.7}
+#hud strong{color:#00eaff}
+#exit{position:absolute;right:15px;top:15px}
+#help{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);
+background:#071526e8;border:1px solid #00dfff;border-radius:9px;
+padding:12px;font-size:12px;white-space:nowrap}
+@media(max-width:650px){
+ #preview{grid-template-columns:1fr}
+ #help{font-size:10px;max-width:95%;white-space:normal;text-align:center}
+}
 </style>
 </head>
 <body>
 
-<div id="menu">
- <div class="panel">
-  <div class="top">
-   <div>
-    <h1>NEON RACER WORLD</h1>
-    <div class="sub">OPEN WORLD · GARAGE · RACING</div>
-   </div>
-   <button class="secondary" onclick="resetSave()">Reiniciar progresso</button>
-  </div>
-
-  <div class="stats">
-   <div class="stat">💰 Dinheiro: <strong id="money">0</strong> CR</div>
-   <div class="stat">🏆 Recorde: <strong id="record">0</strong> km/h</div>
-   <div class="stat">🚗 Carros: <strong id="owned">1</strong>/12</div>
-  </div>
-
-  <h2>GARAGEM</h2>
-  <p class="sub">Escolhe o teu carro. Os veículos desbloqueados ficam guardados.</p>
-  <div id="cars"></div>
-
-  <div style="max-width:420px;margin-top:22px">
-   <label for="color">Cor do carro</label>
-   <input id="color" type="color" value="#087fff">
-   <p class="sub">A cor escolhida é guardada automaticamente.</p>
-   <button id="start" onclick="startGame()">ENTRAR NO MUNDO</button>
-   <div id="notice">Os teus dados são guardados neste navegador.</div>
-  </div>
+<section id="garage">
+<div class="container">
+<header>
+ <div>
+  <h1>NEON RACER WORLD</h1>
+  <p class="muted">THE ULTIMATE DRIVING EXPERIENCE</p>
  </div>
+ <button onclick="resetGame()">REINICIAR PROGRESSO</button>
+</header>
+
+<div class="stats">
+ <div class="stat">💰 Créditos: <b id="money">5000</b> CR</div>
+ <div class="stat">🏆 Recorde: <b id="record">0</b> km/h</div>
+ <div class="stat">🚘 Desbloqueados: <b id="owned">1</b>/12</div>
 </div>
 
-<div id="gamehud">
+<h2>GARAGEM DE SUPERCARROS</h2>
+<p class="muted">Escolhe um veículo para conduzir. Desbloqueia novos carros com créditos.</p>
+<div id="cars"></div>
+
+<div id="preview">
+ <div>
+  <h2 id="selectedName">NRW Street</h2>
+  <p id="selectedInfo" class="muted">Desportivo · 280 CV</p>
+  <p>Personaliza a cor do teu veículo:</p>
+  <input type="color" id="color" value="#087fff">
+  <p class="muted">A tua seleção é guardada automaticamente.</p>
+  <button id="play" onclick="startGame()">ENTRAR NO MUNDO 3D</button>
+ </div>
+ <img id="previewImage" alt="Carro selecionado">
+</div>
+<p class="muted">O progresso fica guardado neste navegador. Para sincronizar entre computadores será necessária uma conta online.</p>
+</div>
+</section>
+
+<section id="game">
+<div id="hud">
  <strong>NEON RACER WORLD</strong><br>
- Velocidade: <span id="speed">0</span> km/h<br>
- Nitro: <span id="nitro">100</span>%<br>
- Distância: <span id="distance">0</span> m
+ <span id="hudcar">NRW Street</span><br>
+ Velocidade: <b id="speed">0</b> km/h<br>
+ Nitro: <b id="nitro">100</b>%<br>
+ Distância: <b id="distance">0</b> m
 </div>
-<button id="exit" class="secondary" onclick="backToGarage()">GARAGEM</button>
-<div id="controls" style="display:none">
- ↑ ACELERAR · ↓ TRAVAR · ← → VIRAR · ESPAÇO NITRO
-</div>
+<button id="exit" onclick="backToGarage()">VOLTAR À GARAGEM</button>
+<div id="help">↑ ACELERAR · ↓ TRAVAR · ← ESQUERDA · DIREITA → · ESPAÇO NITRO</div>
+</section>
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 
-/* =========================
-   DADOS E GUARDAR PROGRESSO
-========================= */
-
-const defaultSave={
- money:5000,
- selected:0,
- color:'#087fff',
- owned:[0],
- record:0,
- distance:0
-};
-
-let save;
-try{
- save={...defaultSave,...JSON.parse(localStorage.getItem('nrw_save')||'{}')};
-}catch(e){save={...defaultSave};}
-
-function persist(){
- localStorage.setItem('nrw_save',JSON.stringify(save));
- updateStats();
-}
-
-function updateStats(){
- document.getElementById('money').textContent=save.money;
- document.getElementById('record').textContent=save.record;
- document.getElementById('owned').textContent=save.owned.length;
-}
-
-function resetSave(){
- if(confirm('Queres apagar todo o progresso guardado?')){
-  save={...defaultSave,owned:[0]};
-  persist();
-  renderGarage();
- }
-}
-
-/* =========================
-   CATÁLOGO DE 12 CARROS
-========================= */
-
+/* CARROS E IMAGENS
+   As fotografias são referências visuais, não modelos 3D.
+*/
 const cars=[
- {name:'NRW Street',type:'Desportivo',price:0,power:280,color:'#087fff',width:1.9,length:4.2},
- {name:'Falcon GT',type:'Desportivo',price:2500,power:330,color:'#d92b32',width:2,length:4.4},
- {name:'Vortex R',type:'Supercarro',price:5000,power:410,color:'#00a878',width:2,length:4.5},
- {name:'Thunder X',type:'Supercarro',price:7500,power:480,color:'#e4a900',width:2,length:4.6},
- {name:'Apex RS',type:'Pista',price:10000,power:520,color:'#eeeeee',width:2,length:4.5},
- {name:'Nightblade',type:'Supercarro',price:12500,power:560,color:'#7600bd',width:2,length:4.7},
- {name:'Storm GT',type:'Desportivo',price:15000,power:390,color:'#087fff',width:2,length:4.5},
- {name:'Phantom 900',type:'Hipercarro',price:20000,power:650,color:'#252525',width:2.1,length:4.8},
- {name:'Neon Fury',type:'Hipercarro',price:25000,power:720,color:'#00d6e9',width:2,length:4.7},
- {name:'Aero RS',type:'Pista',price:30000,power:780,color:'#df2020',width:2,length:4.8},
- {name:'Titan X',type:'Hipercarro',price:40000,power:850,color:'#aaaaaa',width:2.1,length:4.9},
- {name:'Neon Legend',type:'Lendário',price:55000,power:950,color:'#ffcc00',width:2,length:5}
+ {name:"BMW M4",type:"Desportivo",hp:510,price:0,color:"#087fff",img:"https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800"},
+ {name:"Porsche 911 GT3 RS",type:"Pista",hp:525,price:5000,color:"#eeeeee",img:"https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800"},
+ {name:"Nissan GT-R",type:"Desportivo",hp:570,price:7500,color:"#c51d2b",img:"https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800"},
+ {name:"Lamborghini",type:"Supercarro",hp:640,price:12000,color:"#e8c500",img:"https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?w=800"},
+ {name:"Ferrari",type:"Supercarro",hp:710,price:16000,color:"#d71920",img:"https://images.unsplash.com/photo-1592198084033-aade902d1aae?w=800"},
+ {name:"McLaren",type:"Supercarro",hp:720,price:20000,color:"#ff7518",img:"https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?w=800"},
+ {name:"Audi R8",type:"Desportivo",hp:620,price:23000,color:"#aaaaaa",img:"https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800"},
+ {name:"Mercedes AMG",type:"Desportivo",hp:585,price:26000,color:"#202b39",img:"https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800"},
+ {name:"Ford Mustang",type:"Muscle car",hp:480,price:29000,color:"#1565c0",img:"https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?w=800"},
+ {name:"Corvette",type:"Desportivo",hp:670,price:33000,color:"#cf202e",img:"https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800"},
+ {name:"Bugatti",type:"Hipercarro",hp:1000,price:45000,color:"#164b91",img:"https://images.unsplash.com/photo-1566023888475-6f17f7e5f8a8?w=800"},
+ {name:"Koenigsegg",type:"Hipercarro",hp:1100,price:60000,color:"#13a5a5",img:"https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800"}
 ];
 
+const defaultSave={money:5000,selected:0,owned:[0],color:"#087fff",record:0,distance:0};
+let save;
+try{
+ save={...defaultSave,...JSON.parse(localStorage.getItem("nrw-save")||"{}")};
+}catch(e){save={...defaultSave};}
+if(!Array.isArray(save.owned))save.owned=[0];
+if(!save.owned.includes(0))save.owned.push(0);
+if(!cars[save.selected])save.selected=0;
+
+function persist(){
+ localStorage.setItem("nrw-save",JSON.stringify(save));
+ updateStats();
+}
+function updateStats(){
+ document.getElementById("money").textContent=save.money.toLocaleString("pt-PT");
+ document.getElementById("record").textContent=save.record;
+ document.getElementById("owned").textContent=save.owned.length;
+}
+
 function renderGarage(){
- const root=document.getElementById('cars');
- root.innerHTML='';
+ const root=document.getElementById("cars");
+ root.innerHTML="";
  cars.forEach((c,i)=>{
-  const owned=save.owned.includes(i);
-  const selected=save.selected===i;
-  const card=document.createElement('div');
-  card.className='carcard'+(selected?' selected':'');
-  card.innerHTML=`
-   <div style="height:8px;border-radius:8px;background:${c.color}"></div>
-   <h3>${c.name}</h3>
-   <p>${c.type} · ${c.power} CV</p>
-   <p>${owned?'Desbloqueado':c.price.toLocaleString('pt-PT')+' CR'}</p>
-   <button>${selected?'SELECIONADO':owned?'ESCOLHER':'DESBLOQUEAR'}</button>`;
-  card.querySelector('button').onclick=()=>{
-   if(owned){
+  const isOwned=save.owned.includes(i);
+  const card=document.createElement("article");
+  card.className="car"+(save.selected===i?" selected":"");
+  const img=document.createElement("img");
+  img.src=c.img;
+  img.alt=c.name;
+  img.loading="lazy";
+  img.onerror=()=>{img.style.display="none";};
+  const info=document.createElement("div");
+  info.className="carinfo";
+  const title=document.createElement("h3");
+  title.textContent=c.name;
+  const desc=document.createElement("p");
+  desc.textContent=c.type+" · "+c.hp+" CV";
+  const price=document.createElement("p");
+  price.textContent=isOwned?"Desbloqueado":c.price.toLocaleString("pt-PT")+" CR";
+  const btn=document.createElement("button");
+  btn.textContent=save.selected===i?"SELECIONADO":isOwned?"ESCOLHER":"DESBLOQUEAR";
+  btn.disabled=save.selected===i;
+  btn.onclick=(e)=>{
+   e.stopPropagation();
+   if(isOwned){
     save.selected=i;
-    document.getElementById('color').value=save.color;
+    save.color=c.color;
     persist();
     renderGarage();
    }else if(save.money>=c.price){
@@ -170,50 +178,60 @@ function renderGarage(){
     save.owned.push(i);
     save.selected=i;
     save.color=c.color;
-    document.getElementById('color').value=c.color;
     persist();
     renderGarage();
-   }else{
-    alert('Ainda não tens dinheiro suficiente!');
+   }else alert("Não tens créditos suficientes!");
+  };
+  info.append(title,desc,price,btn);
+  card.append(img,info);
+  card.onclick=()=>{
+   if(isOwned){
+    save.selected=i;
+    save.color=c.color;
+    persist();
+    renderGarage();
    }
   };
-  root.appendChild(card);
+  root.append(card);
  });
+ const selected=cars[save.selected];
+ document.getElementById("selectedName").textContent=selected.name;
+ document.getElementById("selectedInfo").textContent=selected.type+" · "+selected.hp+" CV";
+ document.getElementById("previewImage").src=selected.img;
+ document.getElementById("color").value=save.color;
 }
-
-document.getElementById('color').value=save.color;
-document.getElementById('color').oninput=e=>{
- save.color=e.target.value;
- persist();
-};
-
+document.getElementById("color").addEventListener("input",e=>{
+ save.color=e.target.value;persist();
+});
+function resetGame(){
+ if(confirm("Apagar todo o progresso?")){
+  save={...defaultSave,owned:[0]};
+  persist();renderGarage();
+ }
+}
+window.resetGame=resetGame;
 updateStats();
 renderGarage();
 
-/* =========================
-   MUNDO 3D
-========================= */
-
+/* CENA THREE.JS */
+const game=document.getElementById("game");
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x101b2d);
-scene.fog=new THREE.FogExp2(0x101b2d,.008);
-
+scene.background=new THREE.Color(0x101a2c);
+scene.fog=new THREE.FogExp2(0x101a2c,.008);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,500);
 camera.position.set(0,5,11);
-
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.15;
-document.body.appendChild(renderer.domElement);
+renderer.toneMappingExposure=1.1;
+game.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xb5d8ff,0x253044,2));
-
-const sun=new THREE.DirectionalLight(0xe5efff,2.3);
+scene.add(new THREE.HemisphereLight(0xbad8ff,0x283344,2));
+const sun=new THREE.DirectionalLight(0xffe8cb,2.1);
 sun.position.set(-15,25,12);
 sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
@@ -222,267 +240,150 @@ scene.add(sun);
 function mat(color,rough=.5,metal=.1){
  return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
 }
-
-function box(parent,w,h,d,material,x,y,z){
- const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
- mesh.position.set(x,y,z);
- mesh.castShadow=true;
- mesh.receiveShadow=true;
- parent.add(mesh);
- return mesh;
+function box(parent,w,h,d,m,x,y,z){
+ const obj=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+ obj.position.set(x,y,z);obj.castShadow=true;obj.receiveShadow=true;
+ parent.add(obj);return obj;
 }
 
+/* ESTRADA */
 box(scene,250,.2,450,mat(0x1b2b24),0,-.2,-160);
 box(scene,16,.12,450,mat(0x252a33,.9),0,-.08,-160);
-
-for(const side of [-1,1]){
- box(scene,.3,.15,450,mat(0x9099a0),side*8.2,-.02,-160);
- box(scene,2,.1,450,mat(0x4b5159),side*9.3,-.08,-160);
+for(const s of [-1,1]){
+ box(scene,.3,.15,450,mat(0x8a9298),s*8.2,-.02,-160);
+ box(scene,2,.1,450,mat(0x4b5159),s*9.3,-.08,-160);
 }
-
 const roadLines=[];
 for(let i=0;i<65;i++){
- const line=box(scene,.13,.035,4,mat(0xffffff),0,.01,15-i*7);
- roadLines.push(line);
+ roadLines.push(box(scene,.13,.035,4,mat(0xffffff),0,.01,15-i*7));
 }
 
-/* Edifícios e janelas */
-
+/* CIDADE */
 const buildings=[];
-const windowsMat=[
+const winMats=[
  new THREE.MeshBasicMaterial({color:0x74cfff}),
  new THREE.MeshBasicMaterial({color:0xffd08b}),
  new THREE.MeshBasicMaterial({color:0x244b66})
 ];
-
-for(let i=0;i<35;i++){
+for(let i=0;i<36;i++){
  for(const side of [-1,1]){
-  const w=5+Math.random()*6;
-  const h=10+Math.random()*22;
-  const d=6+Math.random()*5;
-  const group=new THREE.Group();
-  group.position.set(side*(15+Math.random()*9),h/2,-i*12-12);
-  scene.add(group);
-  box(group,w,h,d,mat(0x202e42,.65,.25),0,0,0);
-
+  const w=5+Math.random()*6,h=10+Math.random()*22,d=6+Math.random()*5;
+  const g=new THREE.Group();
+  g.position.set(side*(15+Math.random()*9),h/2,-i*12-12);
+  scene.add(g);
+  box(g,w,h,d,mat(0x202e42,.65,.25),0,0,0);
   for(let y=-h/2+2;y<h/2-1;y+=3){
    for(let x=-w/2+1;x<w/2-1;x+=2){
     if(Math.random()>.2){
-     const win=new THREE.Mesh(
-      new THREE.BoxGeometry(.9,1.4,.04),
-      windowsMat[Math.floor(Math.random()*windowsMat.length)]
-     );
-     win.position.set(x,y,d/2+.03);
-     group.add(win);
+     const win=new THREE.Mesh(new THREE.BoxGeometry(.9,1.4,.04),
+      winMats[Math.floor(Math.random()*winMats.length)]);
+     win.position.set(x,y,d/2+.03);g.add(win);
     }
    }
   }
-  buildings.push(group);
+  buildings.push(g);
  }
 }
 
-/* =========================
-   CONSTRUÇÃO DOS CARROS
-========================= */
-
-let car=new THREE.Group();
+/* VEÍCULO 3D */
+let car=new THREE.Group(),wheels=[];
 scene.add(car);
-let wheels=[];
-let nitroLights=[];
-
-function buildCar(index){
- scene.remove(car);
- car=new THREE.Group();
- scene.add(car);
- wheels=[];
- nitroLights=[];
-
- const spec=cars[index];
- const paint=new THREE.MeshStandardMaterial({
-  color:save.color,metalness:.82,roughness:.23
- });
- const black=mat(0x090b10,.35,.25);
- const glass=new THREE.MeshPhysicalMaterial({
-  color:0x132b43,metalness:.4,roughness:.13
- });
- const rubber=mat(0x080808,.95);
- const chrome=mat(0xb6c5d3,.2,.9);
-
- const w=spec.width;
- const l=spec.length;
-
+function buildCar(){
+ scene.remove(car);car=new THREE.Group();scene.add(car);wheels=[];
+ const spec=cars[save.selected];
+ const paint=new THREE.MeshStandardMaterial({color:save.color,metalness:.8,roughness:.22});
+ const glass=new THREE.MeshPhysicalMaterial({color:0x142c43,metalness:.4,roughness:.14});
+ const black=mat(0x090b10,.4,.2),rubber=mat(0x080808,.95),chrome=mat(0xb8c6d3,.2,.9);
+ const w=2,l=4.5;
  box(car,w,.55,l,paint,0,.7,0);
- box(car,w*.88,.2,l*.76,paint,0,1,-.05);
-
- // Capô e traseira
- box(car,w*.9,.17,l*.3,paint,0,1,-l*.34);
- box(car,w*.9,.2,l*.22,paint,0,.97,l*.37);
-
- // Habitáculo
- box(car,w*.72,.72,l*.43,glass,0,1.38,.1);
- box(car,w*.7,.1,l*.38,paint,0,1.78,.1);
-
- // Para-choques
- box(car,w*1.03,.2,.2,black,0,.48,-l*.5);
- box(car,w*1.03,.2,.2,black,0,.48,l*.5);
-
- // Grelha frontal
- box(car,w*.45,.18,.035,black,0,.67,-l*.505);
-
- // Jantes e pneus
- for(const x of [-w*.56,w*.56]){
-  for(const z of [-l*.32,l*.32]){
-   const wheel=new THREE.Group();
-   wheel.position.set(x,.47,z);
-   car.add(wheel);
-
-   const tyre=new THREE.Mesh(
-    new THREE.CylinderGeometry(.43,.43,.26,32),rubber);
-   tyre.rotation.z=Math.PI/2;
-   wheel.add(tyre);
-
-   const rim=new THREE.Mesh(
-    new THREE.CylinderGeometry(.25,.25,.28,24),
-    chrome);
-   rim.rotation.z=Math.PI/2;
-   wheel.add(rim);
-
-   wheels.push(wheel);
+ box(car,w*.88,.2,l*.75,paint,0,1,0);
+ box(car,w*.72,.72,l*.43,glass,0,1.4,.1);
+ box(car,w*.7,.1,l*.4,paint,0,1.79,.1);
+ box(car,w*1.02,.18,.2,black,0,.45,-l*.5);
+ box(car,w*1.02,.18,.2,black,0,.45,l*.5);
+ for(const x of [-1.08,1.08]){
+  for(const z of [-1.4,1.4]){
+   const group=new THREE.Group();group.position.set(x,.47,z);car.add(group);
+   const tyre=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.27,32),rubber);
+   tyre.rotation.z=Math.PI/2;group.add(tyre);
+   const rim=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.29,24),chrome);
+   rim.rotation.z=Math.PI/2;group.add(rim);wheels.push(group);
   }
  }
-
- // Faróis e luzes traseiras
- for(const x of [-w*.33,w*.33]){
-  const head=new THREE.Mesh(
-   new THREE.BoxGeometry(.42,.13,.07),
-   new THREE.MeshBasicMaterial({color:0xcaf6ff}));
-  head.position.set(x,.85,-l*.51);
-  car.add(head);
-
-  const rear=new THREE.Mesh(
-   new THREE.BoxGeometry(.45,.13,.07),
-   new THREE.MeshBasicMaterial({color:0xff1010}));
-  rear.position.set(x,.83,l*.51);
-  car.add(rear);
-
-  const exhaust=new THREE.Mesh(
-   new THREE.CylinderGeometry(.09,.09,.2,12),
-   chrome);
-  exhaust.rotation.x=Math.PI/2;
-  exhaust.position.set(x*.7,.42,l*.53);
-  car.add(exhaust);
+ for(const x of [-.67,.67]){
+  box(car,.45,.14,.06,new THREE.MeshBasicMaterial({color:0xcdf6ff}),x,.84,-2.26);
+  box(car,.45,.14,.06,new THREE.MeshBasicMaterial({color:0xff1515}),x,.84,2.26);
  }
-
- // Spoiler para os modelos de potência elevada
- if(spec.power>450){
-  box(car,w*.85,.12,.2,black,0,1.35,l*.43);
-  for(const x of [-.65,.65]){
-   box(car,.09,.35,.09,chrome,x,1.18,l*.43);
-  }
+ if(spec.hp>500){
+  box(car,1.7,.12,.2,black,0,1.35,1.85);
  }
-
- // Luzes de nitro
- const glow=new THREE.PointLight(0x00cfff,0,8);
- glow.position.set(0,.5,l*.65);
- car.add(glow);
- nitroLights.push(glow);
-
  car.position.set(0,0,2);
 }
+buildCar();
 
-buildCar(save.selected);
-
-/* =========================
-   CONDUÇÃO E NITRO
-========================= */
-
+/* CONTROLADORES */
 const keys={};
-addEventListener('keydown',e=>{
+addEventListener("keydown",e=>{
  keys[e.key.toLowerCase()]=true;
- if(e.code==='Space')e.preventDefault();
+ if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
 });
-addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+addEventListener("blur",()=>Object.keys(keys).forEach(k=>keys[k]=false));
 
-let speed=0,nitro=100,distance=0,playing=false;
-let steering=0;
+let playing=false,speed=0,nitro=100,distance=0,steering=0;
 const clock=new THREE.Clock();
+let lastSave=0;
 
 function startGame(){
- buildCar(save.selected);
- document.getElementById('menu').style.display='none';
- document.getElementById('gamehud').style.display='block';
- document.getElementById('exit').style.display='block';
- document.getElementById('controls').style.display='block';
- playing=true;
- clock.getDelta();
+ buildCar();
+ game.style.display="block";
+ document.getElementById("garage").style.display="none";
+ document.getElementById("hudcar").textContent=cars[save.selected].name;
+ playing=true;clock.getDelta();
 }
-
 function backToGarage(){
  playing=false;
  save.record=Math.max(save.record,Math.round(speed));
  save.distance+=Math.round(distance);
  persist();
- document.getElementById('menu').style.display='block';
- document.getElementById('gamehud').style.display='none';
- document.getElementById('exit').style.display='none';
- document.getElementById('controls').style.display='none';
- speed=0;
- nitro=100;
- distance=0;
+ game.style.display="none";
+ document.getElementById("garage").style.display="block";
+ speed=0;nitro=100;distance=0;
  renderGarage();
 }
+window.startGame=startGame;
+window.backToGarage=backToGarage;
 
 function animate(){
  requestAnimationFrame(animate);
  const dt=Math.min(clock.getDelta(),.04);
-
  if(playing){
   const spec=cars[save.selected];
-  const accelerating=keys.w||keys.arrowup;
-  const braking=keys.s||keys.arrowdown;
-  const boost=keys[' '];
-
-  if(accelerating)speed+=(spec.power/10)*dt;
-  else speed-=12*dt;
-  if(braking)speed-=55*dt;
-
-  if(boost&&nitro>0&&speed>10){
-   speed+=85*dt;
-   nitro=Math.max(0,nitro-24*dt);
-   nitroLights.forEach(l=>l.intensity=35);
-  }else{
-   nitro=Math.min(100,nitro+7*dt);
-   nitroLights.forEach(l=>l.intensity=0);
-  }
-
+  if(keys.w||keys.arrowup)speed+=(spec.hp/12)*dt;
+  else speed-=10*dt;
+  if(keys.s||keys.arrowdown)speed-=55*dt;
+  if(keys[" "]&&nitro>0&&speed>10){
+   speed+=75*dt;nitro=Math.max(0,nitro-25*dt);
+  }else nitro=Math.min(100,nitro+6*dt);
   speed=THREE.MathUtils.clamp(speed,0,260);
 
-  // ESQUERDA NEGATIVA, DIREITA POSITIVA
   const left=keys.a||keys.arrowleft;
   const right=keys.d||keys.arrowright;
   const direction=(right?1:0)-(left?1:0);
-
   steering=THREE.MathUtils.lerp(steering,direction,dt*5);
-  car.position.x+=steering*(speed/260)*12*dt;
-  car.position.x=THREE.MathUtils.clamp(car.position.x,-5.6,5.6);
-  car.rotation.z=-steering*.11;
+  car.position.x=THREE.MathUtils.clamp(
+   car.position.x+steering*(speed/260)*12*dt,-5.6,5.6);
+  car.rotation.z=-steering*.1;
   car.rotation.y=-steering*.08;
-
   wheels.forEach(w=>w.rotation.x+=speed*dt/25);
 
   const movement=speed*dt*.4;
   distance+=movement;
-  save.record=Math.max(save.record,Math.round(speed));
-
   roadLines.forEach(m=>{
-   m.position.z+=movement;
-   if(m.position.z>20)m.position.z-=455;
+   m.position.z+=movement;if(m.position.z>20)m.position.z-=455;
   });
-
   buildings.forEach(b=>{
-   b.position.z+=movement;
-   if(b.position.z>25)b.position.z-=420;
+   b.position.z+=movement;if(b.position.z>25)b.position.z-=432;
   });
 
   camera.position.x=THREE.MathUtils.lerp(camera.position.x,car.position.x*.5,dt*3);
@@ -490,26 +391,23 @@ function animate(){
   camera.position.z=THREE.MathUtils.lerp(camera.position.z,11,dt*3);
   camera.lookAt(car.position.x*.4,1,-9);
 
-  document.getElementById('speed').textContent=Math.round(speed);
-  document.getElementById('nitro').textContent=Math.round(nitro);
-  document.getElementById('distance').textContent=Math.round(distance);
+  save.record=Math.max(save.record,Math.round(speed));
+  document.getElementById("speed").textContent=Math.round(speed);
+  document.getElementById("nitro").textContent=Math.round(nitro);
+  document.getElementById("distance").textContent=Math.round(distance);
 
-  // Guardar automaticamente de forma periódica
-  if(Math.floor(distance)%100<movement){
-   save.distance+=100;
-   persist();
+  if(distance-lastSave>=100){
+   save.distance+=Math.floor((distance-lastSave)/100)*100;
+   lastSave=distance;persist();
   }
  }
-
  renderer.render(scene,camera);
 }
-
-addEventListener('resize',()=>{
+addEventListener("resize",()=>{
  camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
 });
-
 animate();
 </script>
 </body>
