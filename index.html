@@ -1,0 +1,211 @@
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON RACER WORLD</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; overflow: hidden;
+  background: #050817; color: white;
+  font-family: Arial, sans-serif;
+}
+#hud {
+  position: fixed; top: 20px; left: 20px;
+  z-index: 2; background: #07152ddd;
+  padding: 16px 22px; border: 1px solid #00eaff;
+  border-radius: 12px;
+}
+h1 { color: #00eaff; font-size: 20px; margin: 0 0 8px; }
+#speed { font-size: 28px; font-weight: bold; }
+#help {
+  position: fixed; bottom: 18px; left: 50%;
+  transform: translateX(-50%);
+  background: #07152ddd; padding: 12px 18px;
+  border-radius: 10px; text-align: center;
+  font-size: 13px; white-space: nowrap;
+}
+</style>
+</head>
+<body>
+<div id="hud">
+  <h1>NEON RACER WORLD</h1>
+  <div>VELOCIDADE</div>
+  <div id="speed">0 km/h</div>
+</div>
+<div id="help">W / ↑ Acelerar · S / ↓ Travar · A / ← Esquerda · D / → Direita</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x071326);
+scene.fog = new THREE.Fog(0x071326, 45, 180);
+
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 300);
+camera.position.set(0, 6, 12);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xbadfff, 0x263344, 2));
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(-8, 15, 8);
+sun.castShadow = true;
+scene.add(sun);
+
+// Chão
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(200, 300),
+  new THREE.MeshStandardMaterial({ color: 0x17251f })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.z = -80;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Estrada
+const road = new THREE.Mesh(
+  new THREE.PlaneGeometry(15, 300),
+  new THREE.MeshStandardMaterial({ color: 0x252a35 })
+);
+road.rotation.x = -Math.PI / 2;
+road.position.set(0, 0.02, -80);
+scene.add(road);
+
+// Linhas da estrada
+const lines = [];
+for (let i = 0; i < 24; i++) {
+  const line = new THREE.Mesh(
+    new THREE.BoxGeometry(0.16, 0.035, 3),
+    new THREE.MeshBasicMaterial({ color: 0x00eaff })
+  );
+  line.position.set(0, 0.05, 15 - i * 10);
+  scene.add(line);
+  lines.push(line);
+}
+
+// Carro
+const car = new THREE.Group();
+scene.add(car);
+
+const body = new THREE.Mesh(
+  new THREE.BoxGeometry(2.1, 0.65, 4),
+  new THREE.MeshStandardMaterial({
+    color: 0x00aaff, metalness: 0.7, roughness: 0.25
+  })
+);
+body.position.y = 0.75;
+body.castShadow = true;
+car.add(body);
+
+const cabin = new THREE.Mesh(
+  new THREE.BoxGeometry(1.55, 0.7, 1.8),
+  new THREE.MeshStandardMaterial({
+    color: 0x101c32, metalness: 0.5, roughness: 0.15
+  })
+);
+cabin.position.set(0, 1.35, -0.25);
+car.add(cabin);
+
+// Rodas
+const wheels = [];
+for (const x of [-1.08, 1.08]) {
+  for (const z of [-1.25, 1.25]) {
+    const wheel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.43, 0.43, 0.28, 24),
+      new THREE.MeshStandardMaterial({ color: 0x090909 })
+    );
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(x, 0.48, z);
+    car.add(wheel);
+    wheels.push(wheel);
+  }
+}
+
+// Luzes
+for (const x of [-0.7, 0.7]) {
+  const light = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.15, 0.08),
+    new THREE.MeshBasicMaterial({ color: 0x00eaff })
+  );
+  light.position.set(x, 0.9, -2.04);
+  car.add(light);
+}
+
+const buildings = [];
+for (let i = 0; i < 32; i++) {
+  for (const side of [-1, 1]) {
+    const height = 5 + Math.random() * 17;
+    const building = new THREE.Mesh(
+      new THREE.BoxGeometry(4 + Math.random() * 5, height, 5),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color().setHSL(0.58 + Math.random()*0.12, 0.5, 0.16)
+      })
+    );
+    building.position.set(side * (13 + Math.random()*9), height/2, -i*12);
+    scene.add(building);
+    buildings.push(building);
+  }
+}
+
+const keys = {};
+addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+let speed = 0;
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.04);
+
+  if (keys['w'] || keys['arrowup']) speed += 35 * dt;
+  else speed -= 12 * dt;
+  if (keys['s'] || keys['arrowdown']) speed -= 55 * dt;
+  speed = THREE.MathUtils.clamp(speed, 0, 180);
+
+  const steer = (keys['a'] || keys['arrowleft'] ? 1 : 0)
+              - (keys['d'] || keys['arrowright'] ? 1 : 0);
+
+  car.position.x += steer * (speed / 180) * 12 * dt;
+  car.position.x = THREE.MathUtils.clamp(car.position.x, -5.5, 5.5);
+  car.rotation.z = -steer * 0.12;
+  car.rotation.y = -steer * 0.12;
+
+  wheels.forEach(w => w.rotation.x += speed * dt / 30);
+
+  lines.forEach(line => {
+    line.position.z += speed * dt * 0.35;
+    if (line.position.z > 15) line.position.z -= 240;
+  });
+
+  buildings.forEach(b => {
+    b.position.z += speed * dt * 0.35;
+    if (b.position.z > 20) b.position.z -= 384;
+  });
+
+  camera.position.x += (car.position.x * 0.5 - camera.position.x) * 3 * dt;
+  camera.lookAt(car.position.x * 0.4, 1, -8);
+
+  document.getElementById('speed').textContent =
+    Math.round(speed) + ' km/h';
+
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
