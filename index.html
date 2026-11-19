@@ -7,44 +7,203 @@
 <title>NEON RACER WORLD</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;overflow:hidden;background:#07101b;color:white;font-family:Arial}
+body{margin:0;background:#050914;color:white;font-family:Arial;overflow:hidden}
 canvas{display:block}
-#hud{position:fixed;top:18px;left:18px;z-index:5;background:#07101be8;
-border:1px solid #00dfff;border-radius:12px;padding:15px 20px;
-box-shadow:0 0 20px #00cfff55}
-#hud h1{font-size:19px;color:#00eaff;margin:0 0 9px;letter-spacing:2px}
-#speed{font-size:32px;font-weight:bold}
-#gear{color:#00eaff;font-size:13px}
-#help{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);
-background:#07101be8;border:1px solid #00bddd;border-radius:10px;
-padding:11px 16px;font-size:12px;text-align:center;white-space:nowrap}
-#loading{position:fixed;inset:0;background:#07101b;display:grid;
-place-items:center;z-index:10;font-size:22px;color:#00eaff}
+button,select{font:inherit}
+#menu{
+ position:fixed;inset:0;z-index:5;overflow:auto;
+ background:linear-gradient(130deg,#06101fee,#081b31ee);
+ padding:30px;
+}
+h1{color:#00eaff;letter-spacing:3px;font-size:clamp(25px,5vw,48px);margin:0}
+h2{color:#00eaff}
+.sub{color:#9cb6ca}
+.panel{max-width:1050px;margin:auto}
+.top{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;align-items:center}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0}
+.stat{background:#10283b;border:1px solid #12617b;border-radius:10px;padding:12px 17px}
+#cars{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.carcard{background:#102033;border:1px solid #29465e;border-radius:12px;padding:14px}
+.carcard.selected{border:2px solid #00eaff;box-shadow:0 0 18px #00dfff55}
+.carcard h3{margin:8px 0}
+.carcard p{color:#9bb2c4;font-size:13px}
+button{background:#00bddd;color:#00131c;border:0;padding:11px 17px;
+border-radius:8px;font-weight:bold;cursor:pointer}
+button:hover{background:#72efff}
+button:disabled{opacity:.4;cursor:not-allowed}
+.secondary{background:#233e55;color:white}
+#start{font-size:18px;padding:15px 30px;margin-top:20px}
+#gamehud{display:none;position:fixed;z-index:3;top:15px;left:15px;
+background:#071526e8;border:1px solid #00dfff;border-radius:12px;padding:15px}
+#gamehud strong{color:#00eaff}
+#controls{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+background:#071526e8;padding:12px;border-radius:10px;font-size:12px;white-space:nowrap}
+#exit{display:none;position:fixed;right:15px;top:15px;z-index:4}
+#color{width:100%;margin-top:10px}
+#notice{color:#8feaff;font-size:13px;margin-top:12px}
 </style>
 </head>
 <body>
-<div id="loading">A carregar NEON RACER WORLD...</div>
-<div id="hud">
-<h1>NEON RACER WORLD</h1>
-<div>VELOCIDADE</div>
-<div id="speed">0 km/h</div>
-<div id="gear">MODO LIVRE · NEON CITY</div>
+
+<div id="menu">
+ <div class="panel">
+  <div class="top">
+   <div>
+    <h1>NEON RACER WORLD</h1>
+    <div class="sub">OPEN WORLD · GARAGE · RACING</div>
+   </div>
+   <button class="secondary" onclick="resetSave()">Reiniciar progresso</button>
+  </div>
+
+  <div class="stats">
+   <div class="stat">💰 Dinheiro: <strong id="money">0</strong> CR</div>
+   <div class="stat">🏆 Recorde: <strong id="record">0</strong> km/h</div>
+   <div class="stat">🚗 Carros: <strong id="owned">1</strong>/12</div>
+  </div>
+
+  <h2>GARAGEM</h2>
+  <p class="sub">Escolhe o teu carro. Os veículos desbloqueados ficam guardados.</p>
+  <div id="cars"></div>
+
+  <div style="max-width:420px;margin-top:22px">
+   <label for="color">Cor do carro</label>
+   <input id="color" type="color" value="#087fff">
+   <p class="sub">A cor escolhida é guardada automaticamente.</p>
+   <button id="start" onclick="startGame()">ENTRAR NO MUNDO</button>
+   <div id="notice">Os teus dados são guardados neste navegador.</div>
+  </div>
+ </div>
 </div>
-<div id="help">↑ / W ACELERAR　 ↓ / S TRAVAR　 ← / A ESQUERDA　 → / D DIREITA</div>
+
+<div id="gamehud">
+ <strong>NEON RACER WORLD</strong><br>
+ Velocidade: <span id="speed">0</span> km/h<br>
+ Nitro: <span id="nitro">100</span>%<br>
+ Distância: <span id="distance">0</span> m
+</div>
+<button id="exit" class="secondary" onclick="backToGarage()">GARAGEM</button>
+<div id="controls" style="display:none">
+ ↑ ACELERAR · ↓ TRAVAR · ← → VIRAR · ESPAÇO NITRO
+</div>
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 
+/* =========================
+   DADOS E GUARDAR PROGRESSO
+========================= */
+
+const defaultSave={
+ money:5000,
+ selected:0,
+ color:'#087fff',
+ owned:[0],
+ record:0,
+ distance:0
+};
+
+let save;
+try{
+ save={...defaultSave,...JSON.parse(localStorage.getItem('nrw_save')||'{}')};
+}catch(e){save={...defaultSave};}
+
+function persist(){
+ localStorage.setItem('nrw_save',JSON.stringify(save));
+ updateStats();
+}
+
+function updateStats(){
+ document.getElementById('money').textContent=save.money;
+ document.getElementById('record').textContent=save.record;
+ document.getElementById('owned').textContent=save.owned.length;
+}
+
+function resetSave(){
+ if(confirm('Queres apagar todo o progresso guardado?')){
+  save={...defaultSave,owned:[0]};
+  persist();
+  renderGarage();
+ }
+}
+
+/* =========================
+   CATÁLOGO DE 12 CARROS
+========================= */
+
+const cars=[
+ {name:'NRW Street',type:'Desportivo',price:0,power:280,color:'#087fff',width:1.9,length:4.2},
+ {name:'Falcon GT',type:'Desportivo',price:2500,power:330,color:'#d92b32',width:2,length:4.4},
+ {name:'Vortex R',type:'Supercarro',price:5000,power:410,color:'#00a878',width:2,length:4.5},
+ {name:'Thunder X',type:'Supercarro',price:7500,power:480,color:'#e4a900',width:2,length:4.6},
+ {name:'Apex RS',type:'Pista',price:10000,power:520,color:'#eeeeee',width:2,length:4.5},
+ {name:'Nightblade',type:'Supercarro',price:12500,power:560,color:'#7600bd',width:2,length:4.7},
+ {name:'Storm GT',type:'Desportivo',price:15000,power:390,color:'#087fff',width:2,length:4.5},
+ {name:'Phantom 900',type:'Hipercarro',price:20000,power:650,color:'#252525',width:2.1,length:4.8},
+ {name:'Neon Fury',type:'Hipercarro',price:25000,power:720,color:'#00d6e9',width:2,length:4.7},
+ {name:'Aero RS',type:'Pista',price:30000,power:780,color:'#df2020',width:2,length:4.8},
+ {name:'Titan X',type:'Hipercarro',price:40000,power:850,color:'#aaaaaa',width:2.1,length:4.9},
+ {name:'Neon Legend',type:'Lendário',price:55000,power:950,color:'#ffcc00',width:2,length:5}
+];
+
+function renderGarage(){
+ const root=document.getElementById('cars');
+ root.innerHTML='';
+ cars.forEach((c,i)=>{
+  const owned=save.owned.includes(i);
+  const selected=save.selected===i;
+  const card=document.createElement('div');
+  card.className='carcard'+(selected?' selected':'');
+  card.innerHTML=`
+   <div style="height:8px;border-radius:8px;background:${c.color}"></div>
+   <h3>${c.name}</h3>
+   <p>${c.type} · ${c.power} CV</p>
+   <p>${owned?'Desbloqueado':c.price.toLocaleString('pt-PT')+' CR'}</p>
+   <button>${selected?'SELECIONADO':owned?'ESCOLHER':'DESBLOQUEAR'}</button>`;
+  card.querySelector('button').onclick=()=>{
+   if(owned){
+    save.selected=i;
+    document.getElementById('color').value=save.color;
+    persist();
+    renderGarage();
+   }else if(save.money>=c.price){
+    save.money-=c.price;
+    save.owned.push(i);
+    save.selected=i;
+    save.color=c.color;
+    document.getElementById('color').value=c.color;
+    persist();
+    renderGarage();
+   }else{
+    alert('Ainda não tens dinheiro suficiente!');
+   }
+  };
+  root.appendChild(card);
+ });
+}
+
+document.getElementById('color').value=save.color;
+document.getElementById('color').oninput=e=>{
+ save.color=e.target.value;
+ persist();
+};
+
+updateStats();
+renderGarage();
+
+/* =========================
+   MUNDO 3D
+========================= */
+
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x101b30);
-scene.fog=new THREE.FogExp2(0x101b30,0.009);
+scene.background=new THREE.Color(0x101b2d);
+scene.fog=new THREE.FogExp2(0x101b2d,.008);
 
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,500);
-camera.position.set(0,5,10);
+camera.position.set(0,5,11);
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -52,251 +211,305 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.15;
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0x9fcaff,0x263040,2));
-const moon=new THREE.DirectionalLight(0xdceaff,2.5);
-moon.position.set(-15,25,10);
-moon.castShadow=true;
-moon.shadow.mapSize.set(2048,2048);
-moon.shadow.camera.left=-35;
-moon.shadow.camera.right=35;
-moon.shadow.camera.top=35;
-moon.shadow.camera.bottom=-35;
-scene.add(moon);
+scene.add(new THREE.HemisphereLight(0xb5d8ff,0x253044,2));
 
-const cyan=new THREE.PointLight(0x00cfff,40,40);
-cyan.position.set(-5,8,-15);
-scene.add(cyan);
+const sun=new THREE.DirectionalLight(0xe5efff,2.3);
+sun.position.set(-15,25,12);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+scene.add(sun);
 
-function material(color,roughness=.5,metalness=.1){
-return new THREE.MeshStandardMaterial({color,roughness,metalness});
+function mat(color,rough=.5,metal=.1){
+ return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
 }
 
-function cube(parent,w,h,d,mat,x,y,z){
-const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-m.position.set(x,y,z);
-m.castShadow=true;
-m.receiveShadow=true;
-parent.add(m);
-return m;
+function box(parent,w,h,d,material,x,y,z){
+ const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+ mesh.position.set(x,y,z);
+ mesh.castShadow=true;
+ mesh.receiveShadow=true;
+ parent.add(mesh);
+ return mesh;
 }
 
-// Chão e estrada
-const ground=cube(scene,250,.2,400,material(0x17241f),0,-.2,-130);
-const road=cube(scene,16,.12,400,material(0x242832,.9),0,-.08,-130);
+box(scene,250,.2,450,mat(0x1b2b24),0,-.2,-160);
+box(scene,16,.12,450,mat(0x252a33,.9),0,-.08,-160);
 
-for(let side of [-1,1]){
-cube(scene,.35,.16,400,material(0x858b91),side*8.15,-.02,-130);
-cube(scene,3,.12,400,material(0x555b60),side*9.8,-.08,-130);
+for(const side of [-1,1]){
+ box(scene,.3,.15,450,mat(0x9099a0),side*8.2,-.02,-160);
+ box(scene,2,.1,450,mat(0x4b5159),side*9.3,-.08,-160);
 }
 
-// Marcas da estrada
-const markings=[];
-for(let i=0;i<60;i++){
-const m=cube(scene,.13,.035,4,material(0xeeeeee),0,.005,15-i*7);
-markings.push(m);
+const roadLines=[];
+for(let i=0;i<65;i++){
+ const line=box(scene,.13,.035,4,mat(0xffffff),0,.01,15-i*7);
+ roadLines.push(line);
 }
 
-// Linhas laterais
-for(let side of [-1,1]){
-cube(scene,.12,.035,400,material(0xeeeeee),side*7,.01,-130);
-}
+/* Edifícios e janelas */
 
-// Edifícios
 const buildings=[];
-const windowMats=[
-new THREE.MeshBasicMaterial({color:0x68cfff}),
-new THREE.MeshBasicMaterial({color:0xffbb66}),
-new THREE.MeshBasicMaterial({color:0x18304a})
+const windowsMat=[
+ new THREE.MeshBasicMaterial({color:0x74cfff}),
+ new THREE.MeshBasicMaterial({color:0xffd08b}),
+ new THREE.MeshBasicMaterial({color:0x244b66})
 ];
 
-for(let i=0;i<38;i++){
-for(let side of [-1,1]){
-const width=5+Math.random()*7;
-const height=9+Math.random()*27;
-const depth=6+Math.random()*6;
-const x=side*(15+Math.random()*10);
-const z=-i*11-10;
+for(let i=0;i<35;i++){
+ for(const side of [-1,1]){
+  const w=5+Math.random()*6;
+  const h=10+Math.random()*22;
+  const d=6+Math.random()*5;
+  const group=new THREE.Group();
+  group.position.set(side*(15+Math.random()*9),h/2,-i*12-12);
+  scene.add(group);
+  box(group,w,h,d,mat(0x202e42,.65,.25),0,0,0);
 
-const building=new THREE.Group();
-building.position.set(x,height/2,z);
-scene.add(building);
-
-cube(building,width,height,depth,
-material(new THREE.Color().setHSL(.59+Math.random()*.12,.3,.13+Math.random()*.1)),
-0,0,0);
-
-for(let y=-height/2+2;y<height/2-1;y+=3){
-for(let xx=-width/2+1;xx<width/2-1;xx+=2.1){
-if(Math.random()>.22){
-const win=new THREE.Mesh(new THREE.BoxGeometry(.9,1.5,.06),
-windowMats[Math.floor(Math.random()*windowMats.length)]);
-win.position.set(xx,y,depth/2+.035);
-building.add(win);
-}
-}
-}
-buildings.push(building);
-}
+  for(let y=-h/2+2;y<h/2-1;y+=3){
+   for(let x=-w/2+1;x<w/2-1;x+=2){
+    if(Math.random()>.2){
+     const win=new THREE.Mesh(
+      new THREE.BoxGeometry(.9,1.4,.04),
+      windowsMat[Math.floor(Math.random()*windowsMat.length)]
+     );
+     win.position.set(x,y,d/2+.03);
+     group.add(win);
+    }
+   }
+  }
+  buildings.push(group);
+ }
 }
 
-// Candeeiros
-const lamps=[];
-for(let i=0;i<24;i++){
-for(let side of [-1,1]){
-const lamp=new THREE.Group();
-lamp.position.set(side*8.8,0,-i*16);
-scene.add(lamp);
-cube(lamp,.13,5,.13,material(0x343d4a),0,2.5,0);
-cube(lamp,1.1,.12,.13,material(0x343d4a),-side*.5,5,0);
-const bulb=new THREE.Mesh(new THREE.BoxGeometry(.6,.13,.2),
-new THREE.MeshBasicMaterial({color:0x8cecff}));
-bulb.position.set(-side*.8,4.9,0);
-lamp.add(bulb);
-lamps.push(lamp);
-}
-}
+/* =========================
+   CONSTRUÇÃO DOS CARROS
+========================= */
 
-// Carro desportivo
-const car=new THREE.Group();
+let car=new THREE.Group();
 scene.add(car);
+let wheels=[];
+let nitroLights=[];
 
-const paint= new THREE.MeshStandardMaterial({
-color:0x087fff,metalness:.85,roughness:.2
-});
-const black=material(0x080b12,.35,.3);
-const glass=new THREE.MeshPhysicalMaterial({
-color:0x152b42,metalness:.4,roughness:.12,
-transparent:true,opacity:.92
-});
-const rubber=material(0x080808,.95);
-const chrome=material(0xaebbc7,.22,.9);
+function buildCar(index){
+ scene.remove(car);
+ car=new THREE.Group();
+ scene.add(car);
+ wheels=[];
+ nitroLights=[];
 
-// Chassis
-cube(car,2.15,.48,4.5,paint,0,.7,0);
-cube(car,2,.22,3.8,paint,0,.98,-.05);
+ const spec=cars[index];
+ const paint=new THREE.MeshStandardMaterial({
+  color:save.color,metalness:.82,roughness:.23
+ });
+ const black=mat(0x090b10,.35,.25);
+ const glass=new THREE.MeshPhysicalMaterial({
+  color:0x132b43,metalness:.4,roughness:.13
+ });
+ const rubber=mat(0x080808,.95);
+ const chrome=mat(0xb6c5d3,.2,.9);
 
-// Capô
-cube(car,1.9,.22,1.4,paint,0,1,-1.35);
+ const w=spec.width;
+ const l=spec.length;
 
-// Habitáculo
-const cabin=cube(car,1.55,.85,2.05,glass,0,1.48,.2);
-cabin.scale.set(1,1,1);
+ box(car,w,.55,l,paint,0,.7,0);
+ box(car,w*.88,.2,l*.76,paint,0,1,-.05);
 
-// Tejadilho
-cube(car,1.48,.12,1.15,paint,0,1.91,.25);
+ // Capô e traseira
+ box(car,w*.9,.17,l*.3,paint,0,1,-l*.34);
+ box(car,w*.9,.2,l*.22,paint,0,.97,l*.37);
 
-// Spoiler
-cube(car,1.9,.12,.25,black,0,1.35,2.05);
-for(let x of [-.7,.7])cube(car,.1,.35,.1,chrome,x,1.18,2.05);
+ // Habitáculo
+ box(car,w*.72,.72,l*.43,glass,0,1.38,.1);
+ box(car,w*.7,.1,l*.38,paint,0,1.78,.1);
 
-// Rodas
-const wheels=[];
-for(const x of [-1.12,1.12]){
-for(const z of [-1.45,1.45]){
-const wheel=new THREE.Group();
-wheel.position.set(x,.48,z);
-car.add(wheel);
-const tyre=new THREE.Mesh(new THREE.CylinderGeometry(.46,.46,.3,32),rubber);
-tyre.rotation.z=Math.PI/2;
-wheel.add(tyre);
-const rim=new THREE.Mesh(new THREE.CylinderGeometry(.27,.27,.315,24),
-material(0x9aa5b0,.25,.9));
-rim.rotation.z=Math.PI/2;
-wheel.add(rim);
-wheels.push(wheel);
+ // Para-choques
+ box(car,w*1.03,.2,.2,black,0,.48,-l*.5);
+ box(car,w*1.03,.2,.2,black,0,.48,l*.5);
+
+ // Grelha frontal
+ box(car,w*.45,.18,.035,black,0,.67,-l*.505);
+
+ // Jantes e pneus
+ for(const x of [-w*.56,w*.56]){
+  for(const z of [-l*.32,l*.32]){
+   const wheel=new THREE.Group();
+   wheel.position.set(x,.47,z);
+   car.add(wheel);
+
+   const tyre=new THREE.Mesh(
+    new THREE.CylinderGeometry(.43,.43,.26,32),rubber);
+   tyre.rotation.z=Math.PI/2;
+   wheel.add(tyre);
+
+   const rim=new THREE.Mesh(
+    new THREE.CylinderGeometry(.25,.25,.28,24),
+    chrome);
+   rim.rotation.z=Math.PI/2;
+   wheel.add(rim);
+
+   wheels.push(wheel);
+  }
+ }
+
+ // Faróis e luzes traseiras
+ for(const x of [-w*.33,w*.33]){
+  const head=new THREE.Mesh(
+   new THREE.BoxGeometry(.42,.13,.07),
+   new THREE.MeshBasicMaterial({color:0xcaf6ff}));
+  head.position.set(x,.85,-l*.51);
+  car.add(head);
+
+  const rear=new THREE.Mesh(
+   new THREE.BoxGeometry(.45,.13,.07),
+   new THREE.MeshBasicMaterial({color:0xff1010}));
+  rear.position.set(x,.83,l*.51);
+  car.add(rear);
+
+  const exhaust=new THREE.Mesh(
+   new THREE.CylinderGeometry(.09,.09,.2,12),
+   chrome);
+  exhaust.rotation.x=Math.PI/2;
+  exhaust.position.set(x*.7,.42,l*.53);
+  car.add(exhaust);
+ }
+
+ // Spoiler para os modelos de potência elevada
+ if(spec.power>450){
+  box(car,w*.85,.12,.2,black,0,1.35,l*.43);
+  for(const x of [-.65,.65]){
+   box(car,.09,.35,.09,chrome,x,1.18,l*.43);
+  }
+ }
+
+ // Luzes de nitro
+ const glow=new THREE.PointLight(0x00cfff,0,8);
+ glow.position.set(0,.5,l*.65);
+ car.add(glow);
+ nitroLights.push(glow);
+
+ car.position.set(0,0,2);
 }
-}
 
-// Faróis
-for(const x of [-.7,.7]){
-const head=new THREE.Mesh(new THREE.BoxGeometry(.48,.16,.08),
-new THREE.MeshBasicMaterial({color:0xb9f4ff}));
-head.position.set(x,.91,-2.27);
-car.add(head);
-const lamp=new THREE.SpotLight(0xc5f3ff,70,45,.45,.5,1.5);
-lamp.position.set(x,.9,-2.1);
-lamp.target.position.set(x,0,-20);
-car.add(lamp);
-car.add(lamp.target);
-const rear=new THREE.Mesh(new THREE.BoxGeometry(.55,.15,.08),
-new THREE.MeshBasicMaterial({color:0xff1010}));
-rear.position.set(x,.88,2.27);
-car.add(rear);
-}
+buildCar(save.selected);
 
-car.position.set(0,0,2);
+/* =========================
+   CONDUÇÃO E NITRO
+========================= */
 
-// Controlos: esquerda é negativa, direita é positiva
 const keys={};
 addEventListener('keydown',e=>{
-keys[e.key.toLowerCase()]=true;
-if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+ keys[e.key.toLowerCase()]=true;
+ if(e.code==='Space')e.preventDefault();
 });
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));
 
-let speed=0;
+let speed=0,nitro=100,distance=0,playing=false;
 let steering=0;
 const clock=new THREE.Clock();
 
+function startGame(){
+ buildCar(save.selected);
+ document.getElementById('menu').style.display='none';
+ document.getElementById('gamehud').style.display='block';
+ document.getElementById('exit').style.display='block';
+ document.getElementById('controls').style.display='block';
+ playing=true;
+ clock.getDelta();
+}
+
+function backToGarage(){
+ playing=false;
+ save.record=Math.max(save.record,Math.round(speed));
+ save.distance+=Math.round(distance);
+ persist();
+ document.getElementById('menu').style.display='block';
+ document.getElementById('gamehud').style.display='none';
+ document.getElementById('exit').style.display='none';
+ document.getElementById('controls').style.display='none';
+ speed=0;
+ nitro=100;
+ distance=0;
+ renderGarage();
+}
+
 function animate(){
-requestAnimationFrame(animate);
-const dt=Math.min(clock.getDelta(),.04);
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
 
-const accelerating=keys.w||keys.arrowup;
-const braking=keys.s||keys.arrowdown;
-if(accelerating)speed+=38*dt;
-else speed-=9*dt;
-if(braking)speed-=65*dt;
-speed=THREE.MathUtils.clamp(speed,0,240);
+ if(playing){
+  const spec=cars[save.selected];
+  const accelerating=keys.w||keys.arrowup;
+  const braking=keys.s||keys.arrowdown;
+  const boost=keys[' '];
 
-// Direção correta
-const left=keys.a||keys.arrowleft;
-const right=keys.d||keys.arrowright;
-const direction=(right?1:0)-(left?1:0);
+  if(accelerating)speed+=(spec.power/10)*dt;
+  else speed-=12*dt;
+  if(braking)speed-=55*dt;
 
-steering=THREE.MathUtils.lerp(steering,direction,Math.min(1,dt*5));
-car.position.x+=steering*(speed/240)*11*dt;
-car.position.x=THREE.MathUtils.clamp(car.position.x,-5.7,5.7);
+  if(boost&&nitro>0&&speed>10){
+   speed+=85*dt;
+   nitro=Math.max(0,nitro-24*dt);
+   nitroLights.forEach(l=>l.intensity=35);
+  }else{
+   nitro=Math.min(100,nitro+7*dt);
+   nitroLights.forEach(l=>l.intensity=0);
+  }
 
-car.rotation.z=-steering*.10*(speed/100);
-car.rotation.y=-steering*.09;
+  speed=THREE.MathUtils.clamp(speed,0,260);
 
-wheels.forEach(w=>w.rotation.x+=speed*dt/30);
+  // ESQUERDA NEGATIVA, DIREITA POSITIVA
+  const left=keys.a||keys.arrowleft;
+  const right=keys.d||keys.arrowright;
+  const direction=(right?1:0)-(left?1:0);
 
-// Movimento do mundo
-const movement=speed*dt*.38;
-markings.forEach(m=>{
-m.position.z+=movement;
-if(m.position.z>18)m.position.z-=420;
-});
-buildings.forEach(b=>{
-b.position.z+=movement;
-if(b.position.z>25)b.position.z-=418;
-});
-lamps.forEach(l=>{
-l.position.z+=movement;
-if(l.position.z>20)l.position.z-=384;
-});
+  steering=THREE.MathUtils.lerp(steering,direction,dt*5);
+  car.position.x+=steering*(speed/260)*12*dt;
+  car.position.x=THREE.MathUtils.clamp(car.position.x,-5.6,5.6);
+  car.rotation.z=-steering*.11;
+  car.rotation.y=-steering*.08;
 
-// Câmara suave
-const targetX=car.position.x*.55;
-camera.position.x=THREE.MathUtils.lerp(camera.position.x,targetX,dt*3);
-camera.position.y=THREE.MathUtils.lerp(camera.position.y,4.8,dt*2);
-camera.position.z=THREE.MathUtils.lerp(camera.position.z,10,dt*2);
-camera.lookAt(car.position.x*.4,1,-9);
+  wheels.forEach(w=>w.rotation.x+=speed*dt/25);
 
-document.getElementById('speed').textContent=Math.round(speed)+' km/h';
-renderer.render(scene,camera);
+  const movement=speed*dt*.4;
+  distance+=movement;
+  save.record=Math.max(save.record,Math.round(speed));
+
+  roadLines.forEach(m=>{
+   m.position.z+=movement;
+   if(m.position.z>20)m.position.z-=455;
+  });
+
+  buildings.forEach(b=>{
+   b.position.z+=movement;
+   if(b.position.z>25)b.position.z-=420;
+  });
+
+  camera.position.x=THREE.MathUtils.lerp(camera.position.x,car.position.x*.5,dt*3);
+  camera.position.y=THREE.MathUtils.lerp(camera.position.y,5,dt*3);
+  camera.position.z=THREE.MathUtils.lerp(camera.position.z,11,dt*3);
+  camera.lookAt(car.position.x*.4,1,-9);
+
+  document.getElementById('speed').textContent=Math.round(speed);
+  document.getElementById('nitro').textContent=Math.round(nitro);
+  document.getElementById('distance').textContent=Math.round(distance);
+
+  // Guardar automaticamente de forma periódica
+  if(Math.floor(distance)%100<movement){
+   save.distance+=100;
+   persist();
+  }
+ }
+
+ renderer.render(scene,camera);
 }
 
 addEventListener('resize',()=>{
-camera.aspect=innerWidth/innerHeight;
-camera.updateProjectionMatrix();
-renderer.setSize(innerWidth,innerHeight);
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
 });
 
-document.getElementById('loading').style.display='none';
 animate();
 </script>
 </body>
